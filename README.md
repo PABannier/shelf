@@ -8,7 +8,7 @@ A lightweight, ready-to-use distributed file system written in Rust.
 - Volume server: store the actual files
 - Filer store (here, Redis): key-value store used for indexing files
 
-Under the hood, like ![minikeyvalue](github.com/geohot/minikeyvalue), we're
+Under the hood, like ![minikeyvalue](http://github.com/geohot/minikeyvalue), we're
 using Nginx stock, and Redis as the filer store.
 
 We want this file system to be as simple as possible, by supporting the most
