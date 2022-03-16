@@ -1,27 +1,52 @@
 extern crate futures;
+extern crate pretty_env_logger;
+extern crate serde;
 extern crate tokio;
 extern crate tokio_stream;
 extern crate tokio_util;
+extern crate warp;
 
-mod database;
-mod request;
+mod db;
+mod filters;
+mod handlers;
 mod response;
-mod server;
 
 #[cfg(test)]
 mod tests;
 
-use crate::server::start_server;
-use std::env;
-use std::error::Error;
+use crate::db::{new_db, Db};
+use serde::Serialize;
+use std::fmt::Display;
+use std::hash::Hash;
+use std::str::FromStr;
+use warp::Filter;
+
+pub trait Keyable:
+    'static + Send + Sync + Eq + Hash + Display + Clone + Serialize + FromStr
+{
+}
+pub trait Storable: 'static + Send + Sync + Serialize + Clone + Display {}
+
+impl Storable for String {}
+impl Keyable for String {}
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let port = env::args().nth(1).unwrap_or_else(|| "3000".to_string());
-    let port = port.parse::<i16>().unwrap();
+async fn main() {
+    pretty_env_logger::init();
 
-    println!("Listening at 127.0.0.1:{}", port);
+    // Instantiate a new database
+    let db: Db<String, String> = new_db();
+    db.lock()
+        .unwrap()
+        .insert("hello".to_string(), "world".to_string());
 
-    let res = start_server(port).await;
-    res
+    // GET /:key
+    // PUT /:key
+    // DELETE /:key
+    let api = filters::commands(db);
+    let routes = api.with(warp::log("shelf"));
+
+    // Start server...
+    println!("Listening at 127.0.0.1:3000...");
+    warp::serve(routes).run(([127, 0, 0, 1], 3000)).await;
 }
