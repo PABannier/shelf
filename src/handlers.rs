@@ -1,8 +1,7 @@
 use std::convert::Infallible;
-use warp::{http::StatusCode, reply::json};
+use warp::http::Response;
 
 use crate::db::Db;
-use crate::response::Response;
 use crate::{Keyable, Storable};
 
 pub async fn get_key<K: Keyable, V: Storable>(
@@ -11,14 +10,8 @@ pub async fn get_key<K: Keyable, V: Storable>(
 ) -> Result<impl warp::Reply, Infallible> {
     let db = db.lock().unwrap();
     match db.get(&key) {
-        Some(value) => Ok(json(&Response::Value {
-            key,
-            value: value.clone(),
-        })),
-        None => {
-            let msg = format!("key '{}' not found", key);
-            Ok(json(&Response::Error::<K, V> { msg }))
-        }
+        Some(value) => Ok(Response::builder().body(value.to_string())),
+        None => Ok(Response::builder().body("204 NO CONTENT".to_string())),
     }
 }
 
@@ -37,7 +30,7 @@ pub async fn delete_key<K: Keyable, V: Storable>(
 ) -> Result<impl warp::Reply, Infallible> {
     let mut db = db.lock().unwrap();
     match db.remove(&key) {
-        Some(_) => Ok(StatusCode::OK),
-        None => Ok(StatusCode::NO_CONTENT),
+        Some(_) => Ok(Response::builder().body("200 OK".to_string())),
+        None => Ok(Response::builder().body("204 NO CONTENT".to_string())),
     }
 }
