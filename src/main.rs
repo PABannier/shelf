@@ -1,37 +1,29 @@
 extern crate atoi;
-extern crate redis;
+extern crate futures;
 extern crate thiserror;
 extern crate tokio;
+extern crate tokio_stream;
+extern crate tokio_util;
 
+mod database;
+mod request;
+mod response;
 mod server;
 
 #[cfg(test)]
 mod tests;
 
 use crate::server::start_server;
-use clap::Parser;
-
-/// Arguments for setting up the master server
-#[derive(Debug, Parser)]
-#[clap(author, version, about, long_about = None)]
-struct SetupArgs {
-    /// URI of the Filer store (Redis URI)
-    #[clap(short, long, default_value = "redis://127.0.0.1/")]
-    db_uri: String,
-
-    /// Port to which master server listens
-    #[clap(short, long, default_value_t = 3000)]
-    port: u16,
-}
+use std::env;
+use std::error::Error;
 
 #[tokio::main]
-async fn main() {
-    let args = SetupArgs::parse();
+async fn main() -> Result<(), Box<dyn Error>> {
+    let port = env::args().nth(1).unwrap_or_else(|| "3000".to_string());
+    let port = port.parse::<i16>().unwrap();
 
-    let port = args.port;
-    let db_uri = &args.db_uri;
+    println!("Listening at 127.0.0.1:{}", port);
 
-    println!("Starting server on port {}", port);
-
-    start_server(port, db_uri).await;
+    let res = start_server(port).await;
+    res
 }
