@@ -3,9 +3,6 @@ extern crate redis;
 extern crate thiserror;
 extern crate tokio;
 
-mod command;
-mod connection;
-mod frame;
 mod server;
 
 #[cfg(test)]
