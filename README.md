@@ -8,7 +8,7 @@ A lightweight, ready-to-use distributed file system written in Rust.
 - Volume server: store the actual files
 - Filer store (here, Redis): key-value store used for indexing files
 
-Under the hood, like ![minikeyvalue](http://github.com/geohot/minikeyvalue), we're
+Under the hood, like [minikeyvalue](http://github.com/geohot/minikeyvalue), we're
 using Nginx stock, and Redis as the filer store.
 
 We want this file system to be as simple as possible, by supporting the most
@@ -32,12 +32,23 @@ performance between the storage units.
 ## Example
 
 ```
-// Set value 'bar' with key 'foo'
->>> curl -L -X PUT foo bar http://localhost:3000
+# Set value 'bar' with key 'foo'
+>>> curl -d "bar" -X POST http://localhost:3000/foo
 
-// Retrieve value with key 'foo'
->>> curl -L -X GET foo http://localhost:3000
->>> bar
+# Retrieve value with key 'foo'
+>>> curl -L http://localhost:3000/foo
+
+# Delete key 'foo'
+>>> curl -X DELETE http://localhost:3000/foo
+
+# List keys starting with 'foo'
+>>> curl -L http://localhost:3000/foo?list
+
+# Put file in key 'file.txt'
+>>> curl -L -X PUT -T /path/to/local/file.txt localhost:3000/file.txt
+
+# Get file in key 'file.txt'
+>>> curl -L -o /path/to/local/file.txt localhost:3000/file.txt
 ```
 
 ## API

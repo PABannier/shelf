@@ -1,6 +1,4 @@
-extern crate atoi;
 extern crate futures;
-extern crate thiserror;
 extern crate tokio;
 extern crate tokio_stream;
 extern crate tokio_util;
