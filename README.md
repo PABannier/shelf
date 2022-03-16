@@ -17,6 +17,29 @@ frequently used commands, no less, no more.
 When adding or removing a volume, rebalancing is carried out to ensure optimal
 performance between the storage units.
 
+## Roadmap
+
+- [ ] Write tests in Rust
+- [ ] Support RESTful API using cURL (parse JSON body)
+- [ ] Support byte stream storage in the Hashmap database
+- [ ] Support file upload/download as a byte stream and store in the Hashmap database
+- [ ] Support file storage in volume servers (add nginx)
+- [ ] Support subvolumes (sub-addresses)
+- [ ] Rebuild the index from the files found in a subvolumes
+- [ ] Add replicas of one file in different volumes
+- [ ] Add ability to rebalance volumes
+
+## Example
+
+```
+// Set value 'bar' with key 'foo'
+>>> curl -L -X PUT foo bar http://localhost:3000
+
+// Retrieve value with key 'foo'
+>>> curl -L -X GET foo http://localhost:3000
+>>> bar
+```
+
 ## API
 
 As clients, we want to:
