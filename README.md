@@ -32,7 +32,7 @@ performance between the storage units.
 
 ```
 # Set value 'bar' with key 'foo'
->>> curl -d "bar" -X POST http://localhost:3000/foo
+>>> curl -d bar -X PUT http://localhost:3000/foo
 
 # Retrieve value with key 'foo'
 >>> curl -L http://localhost:3000/foo

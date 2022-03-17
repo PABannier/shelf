@@ -12,7 +12,20 @@ struct Value {
 pub fn commands<K: Keyable, V: Storable>(
     db: Db<K, V>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    get_key(db.clone()).or(delete_key(db.clone()))
+    get_key_list(db.clone())
+        .or(get_key(db.clone()))
+        .or(delete_key(db.clone()))
+        .or(insert_key(db))
+}
+
+pub fn get_key_list<K: Keyable, V: Storable>(
+    db: Db<K, V>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path("search")
+        .and(warp::path::param::<K>())
+        .and(warp::get())
+        .and(with_db::<K, V>(db))
+        .and_then(handlers::get_key_list::<K, V>)
 }
 
 pub fn get_key<K: Keyable, V: Storable>(
@@ -24,18 +37,16 @@ pub fn get_key<K: Keyable, V: Storable>(
         .and_then(handlers::get_key::<K, V>)
 }
 
-// pub fn insert_key<
-//     K: 'static + Send + Sync + Eq + Hash + Display + FromStr,
-//     V: 'static + Send + Sync + Serialize,
-// >(
-//     db: Db<K, V>,
-// ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-//     warp::path!("keys" / String)
-//         .and(warp::put())
-//         .and(json_body())
-//         .and(with_db::<K, V>(db))
-//         .and_then(handlers::insert_key::<K, V>)
-// }
+pub fn insert_key<K: Keyable, V: Storable>(
+    db: Db<K, V>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path::param::<K>()
+        .and(warp::put())
+        .and(json_body())
+        .and(with_db::<K, V>(db))
+        .and_then(handlers::insert_key::<K, V>)
+    // .map(|key, value, db| handlers::insert_key(key, value, db))
+}
 
 pub fn delete_key<K: Keyable, V: Storable>(
     db: Db<K, V>,
@@ -52,6 +63,8 @@ fn with_db<K: Send + Sync, V: Send + Sync>(
     warp::any().map(move || db.clone())
 }
 
-// fn json_body() -> impl Filter<Extract = (Value,), Error = warp::Rejection> + Clone {
-//     warp::body::content_length_limit(1024 * 16).and(warp::body::json())
-// }
+fn json_body<V: for<'a> serde::Deserialize<'a> + Send>(
+) -> impl Filter<Extract = (V,), Error = warp::Rejection> + Clone {
+    // Limit to 16Kb the size of the request
+    warp::body::content_length_limit(1024 * 16).and(warp::body::json())
+}
