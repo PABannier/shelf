@@ -85,23 +85,14 @@ pub async fn upload_file<K: Keyable>(
 }
 
 pub async fn download_file<K: Keyable>(key: K) -> Result<impl warp::Reply, Rejection> {
-    // Reading on-disk
     let file_path = format!("./files/{}", key);
 
-    // let file = tokio::fs::read(file_path).await.map_err(|e| {
-    //     eprintln!("error reading file: {}", e);
-    //     warp::reject::reject()
-    // })?;
+    let file = tokio::fs::read(file_path).await.map_err(|e| {
+        eprintln!("error reading file: {}", e);
+        warp::reject::reject()
+    })?;
 
-    match tokio::fs::read(file_path).await {
-        Ok(value) => Ok(Response::builder().status(StatusCode::OK).body(value)),
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            Ok(Response::builder()
-                .status(StatusCode::NO_CONTENT)
-                .body(vec![0]))
-        }
-    }
+    Ok(Response::builder().status(StatusCode::OK).body(file))
 }
 
 pub async fn rejection(err: Rejection) -> Result<impl warp::Reply, Infallible> {
