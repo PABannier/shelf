@@ -64,10 +64,7 @@ pub async fn delete_key<K: Keyable, V: Storable>(
 pub async fn upload_file<K: Keyable>(
     key: K,
     mut buf: impl Buf,
-    db: Db<K, String>,
 ) -> Result<impl warp::Reply, Rejection> {
-    let mut db = db.lock().unwrap();
-
     // Draining the buffer (possibly non-contiguous blocks of memory)
     let mut value = Vec::new();
     while buf.has_remaining() {
@@ -82,11 +79,29 @@ pub async fn upload_file<K: Keyable>(
         warp::reject::reject()
     })?;
 
-    db.insert(key, file_path);
-
     Ok(Response::builder()
         .status(StatusCode::OK)
         .body("200 OK".to_string()))
+}
+
+pub async fn download_file<K: Keyable>(key: K) -> Result<impl warp::Reply, Rejection> {
+    // Reading on-disk
+    let file_path = format!("./files/{}", key);
+
+    // let file = tokio::fs::read(file_path).await.map_err(|e| {
+    //     eprintln!("error reading file: {}", e);
+    //     warp::reject::reject()
+    // })?;
+
+    match tokio::fs::read(file_path).await {
+        Ok(value) => Ok(Response::builder().status(StatusCode::OK).body(value)),
+        Err(e) => {
+            eprintln!("Error reading file: {}", e);
+            Ok(Response::builder()
+                .status(StatusCode::NO_CONTENT)
+                .body(vec![0]))
+        }
+    }
 }
 
 pub async fn rejection(err: Rejection) -> Result<impl warp::Reply, Infallible> {

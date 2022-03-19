@@ -20,29 +20,27 @@ pub fn commands<K: Keyable, V: Storable>(
     //     .or(insert_key(db.clone()))
     //     .or(upload_file::<K>())
     //     .recover(handlers::rejection)
-    upload_file::<K>().recover(handlers::rejection)
+    upload_file::<K>()
+        .or(download_file::<K>())
+        .recover(handlers::rejection)
 }
 
-// pub fn upload_file<K: Keyable, V: Storable>(
-//     db: Db<K, V>,
-// ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-//     warp::path("upload")
-//         .and(warp::path::param::<K>())
-//         .and(warp::multipart::form().max_length(5_000_000))
-//         .and(with_db::<K, V>(db))
-//         .and_then(handlers::upload_file::<K, V>)
-// }
-
 pub fn upload_file<K: Keyable>(
-    db: Db<K, String>,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     // TODO: restrict body size to MAX_SIZE
     warp::path("upload")
         .and(warp::path::param::<K>())
         .and(warp::put())
         .and(warp::body::aggregate())
-        .and(with_db::<K, String>(db))
         .and_then(handlers::upload_file)
+}
+
+pub fn download_file<K: Keyable>(
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path("download")
+        .and(warp::path::param::<K>())
+        .and(warp::get())
+        .and_then(handlers::download_file)
 }
 
 pub fn get_key_list<K: Keyable, V: Storable>(
