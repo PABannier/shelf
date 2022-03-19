@@ -27,6 +27,7 @@ performance between the storage units.
 - [ ] Rebuild the index from the files found in a subvolumes
 - [ ] Add replicas of one file in different volumes
 - [ ] Add ability to rebalance volumes
+- [ ] Add a logger
 
 ## Example
 

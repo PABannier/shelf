@@ -4,11 +4,10 @@ use std::convert::Infallible;
 use warp::{
     http::{Response, StatusCode},
     multipart::{FormData, Part},
-    reply, Rejection,
+    reply, Buf, Rejection,
 };
 
 use crate::db::Db;
-use crate::hash::Record;
 use crate::{Keyable, Storable};
 
 pub async fn get_key_list<K: Keyable, V: Storable>(
@@ -64,49 +63,33 @@ pub async fn delete_key<K: Keyable, V: Storable>(
 
 pub async fn upload_file<K: Keyable>(
     key: K,
-    data: FormData,
-    db: Db<K, Record>,
+    mut buf: impl Buf,
+    db: Db<K, String>,
 ) -> Result<impl warp::Reply, Rejection> {
     let mut db = db.lock().unwrap();
 
-    let parts: Vec<Part> = data.try_collect().await.map_err(|e| {
-        eprintln!("form error {}", e);
+    // Draining the buffer (possibly non-contiguous blocks of memory)
+    let mut value = Vec::new();
+    while buf.has_remaining() {
+        value.put(buf.chunk());
+        buf.advance(buf.chunk().len());
+    }
+
+    // Writing on-disk
+    let file_path = format!("./files/{}", key);
+    tokio::fs::write(&file_path, value).await.map_err(|e| {
+        eprintln!("error writing file: {}", e);
         warp::reject::reject()
     })?;
 
-    for part in parts {
-        if part.name() == "file" {
-            let content_type = part.content_type();
-            let value = part
-                .stream()
-                .try_fold(Vec::new(), |mut vec, data| {
-                    vec.put(data);
-                    async move { Ok(vec) }
-                })
-                .await
-                .map_err(|e| {
-                    eprintln!("reading file error {}", e);
-                    warp::reject::reject()
-                })?;
-
-            let file_name = format!("./files/{}", key);
-
-            tokio::fs::write(file_name, value).await.map_err(|e| {
-                eprintln!("error writing file {}", e);
-                warp::reject::reject()
-            })?;
-        }
-    }
-
-    let record = Record::from_key(&key);
-    db.insert(key, record);
+    db.insert(key, file_path);
 
     Ok(Response::builder()
         .status(StatusCode::OK)
         .body("200 OK".to_string()))
 }
 
-pub async fn rejection(err: Rejection) -> std::result::Result<impl warp::Reply, Infallible> {
+pub async fn rejection(err: Rejection) -> Result<impl warp::Reply, Infallible> {
     let (code, message) = if err.is_not_found() {
         (StatusCode::NOT_FOUND, "Not found".to_string())
     } else if err.find::<warp::reject::PayloadTooLarge>().is_some() {
