@@ -1,28 +1,23 @@
 use bytes::BufMut;
-use futures::TryStreamExt;
 use std::convert::Infallible;
 use warp::{
     http::{Response, StatusCode},
-    multipart::{FormData, Part},
     reply, Buf, Rejection,
 };
 
-use crate::db::Db;
-use crate::{Keyable, Storable};
+use crate::Keyable;
+use crate::{db::Db, hash::key_to_path};
 
-pub async fn get_key_list<K: Keyable, V: Storable>(
+pub async fn get_key_list<K: Keyable>(
     key_prefix: K,
-    db: Db<K, V>,
+    db: Db<K>,
 ) -> Result<impl warp::Reply, Infallible> {
     let db = db.lock().unwrap();
-    let res: Vec<(&K, &V)> = db.range(key_prefix..).collect();
+    let res: Vec<(&K, &String)> = db.range(key_prefix..).collect();
     Ok(reply::json(&res))
 }
 
-pub async fn get_key<K: Keyable, V: Storable>(
-    key: K,
-    db: Db<K, V>,
-) -> Result<impl warp::Reply, Infallible> {
+pub async fn get_key<K: Keyable>(key: K, db: Db<K>) -> Result<impl warp::Reply, Infallible> {
     let db = db.lock().unwrap();
     match db.get(&key) {
         Some(value) => Ok(Response::builder()
@@ -34,10 +29,10 @@ pub async fn get_key<K: Keyable, V: Storable>(
     }
 }
 
-pub async fn insert_key<K: Keyable, V: Storable>(
+pub async fn insert_key<K: Keyable>(
     key: K,
-    value: V,
-    db: Db<K, V>,
+    value: String,
+    db: Db<K>,
 ) -> Result<impl warp::Reply, Infallible> {
     let mut db = db.lock().unwrap();
     db.insert(key, value);
@@ -46,10 +41,7 @@ pub async fn insert_key<K: Keyable, V: Storable>(
         .body("200 OK".to_string()))
 }
 
-pub async fn delete_key<K: Keyable, V: Storable>(
-    key: K,
-    db: Db<K, V>,
-) -> Result<impl warp::Reply, Infallible> {
+pub async fn delete_key<K: Keyable>(key: K, db: Db<K>) -> Result<impl warp::Reply, Infallible> {
     let mut db = db.lock().unwrap();
     match db.remove(&key) {
         Some(_) => Ok(Response::builder()
@@ -64,27 +56,33 @@ pub async fn delete_key<K: Keyable, V: Storable>(
 pub async fn upload_file<K: Keyable>(
     key: K,
     mut buf: impl Buf,
+    db: Db<K>,
 ) -> Result<impl warp::Reply, Rejection> {
-    // Draining the buffer (possibly non-contiguous blocks of memory)
+    let mut db = db.lock().unwrap();
+
     let mut value = Vec::new();
     while buf.has_remaining() {
         value.put(buf.chunk());
         buf.advance(buf.chunk().len());
     }
 
-    // Writing on-disk
-    let file_path = format!("./files/{}", key);
+    let file_path = key_to_path(&key);
+    let file_path = format!("./files/{}", file_path);
     tokio::fs::write(&file_path, value).await.map_err(|e| {
         eprintln!("error writing file: {}", e);
         warp::reject::reject()
     })?;
+
+    let hash = base64::encode(&key);
+    db.insert(key, hash);
 
     Ok(Response::builder()
         .status(StatusCode::OK)
         .body("200 OK".to_string()))
 }
 
-pub async fn download_file<K: Keyable>(key: K) -> Result<impl warp::Reply, Rejection> {
+pub async fn download_file<K: Keyable>(key: K, db: Db<K>) -> Result<impl warp::Reply, Rejection> {
+    let file_path = key_to_path(&key);
     let file_path = format!("./files/{}", key);
 
     let file = tokio::fs::read(file_path).await.map_err(|e| {
