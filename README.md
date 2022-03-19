@@ -27,7 +27,9 @@ performance between the storage units.
 - [ ] Rebuild the index from the files found in a subvolumes
 - [ ] Add replicas of one file in different volumes
 - [ ] Add ability to rebalance volumes
-- [ ] Add a logger
+- [ ] Add a logger on server side
+- [ ] Add various level of authorization (protected files)
+- [ ] Add S3 support
 
 ## Example
 

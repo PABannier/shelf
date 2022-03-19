@@ -3,7 +3,7 @@ use crate::filters::*;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
-fn mock_db() -> Db<String, String> {
+fn mock_db() -> Db<String> {
     let mut db = BTreeMap::new();
     db.insert("hello".to_string(), "world".to_string());
     db.insert("hell".to_string(), "hades".to_string());
