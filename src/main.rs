@@ -9,6 +9,7 @@ extern crate warp;
 mod db;
 mod filters;
 mod handlers;
+mod hash;
 mod response;
 
 #[cfg(test)]

@@ -19,7 +19,7 @@ performance between the storage units.
 
 ## Roadmap
 
-- [ ] Write tests in Rust
+- [x] Write tests in Rust
 - [x] Support RESTful API using cURL (parse JSON body)
 - [ ] Support file upload/download as a byte stream and store in the Hashmap database
 - [ ] Support file storage in volume servers (add nginx)
@@ -27,6 +27,7 @@ performance between the storage units.
 - [ ] Rebuild the index from the files found in a subvolumes
 - [ ] Add replicas of one file in different volumes
 - [ ] Add ability to rebalance volumes
+- [ ] Add a logger
 
 ## Example
 

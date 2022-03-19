@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use serde::{Deserialize, Serialize};
 use warp::Filter;
 
@@ -11,11 +13,34 @@ struct Value {
 
 pub fn commands<K: Keyable, V: Storable>(
     db: Db<K, V>,
+) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
+    // get_key_list(db.clone())
+    //     .or(get_key(db.clone()))
+    //     .or(delete_key(db.clone()))
+    //     .or(insert_key(db.clone()))
+    //     .or(upload_file::<K>())
+    //     .recover(handlers::rejection)
+    upload_file::<K>()
+        .or(download_file::<K>())
+        .recover(handlers::rejection)
+}
+
+pub fn upload_file<K: Keyable>(
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    get_key_list(db.clone())
-        .or(get_key(db.clone()))
-        .or(delete_key(db.clone()))
-        .or(insert_key(db))
+    // TODO: restrict body size to MAX_SIZE
+    warp::path("upload")
+        .and(warp::path::param::<K>())
+        .and(warp::put())
+        .and(warp::body::aggregate())
+        .and_then(handlers::upload_file)
+}
+
+pub fn download_file<K: Keyable>(
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    warp::path("download")
+        .and(warp::path::param::<K>())
+        .and(warp::get())
+        .and_then(handlers::download_file)
 }
 
 pub fn get_key_list<K: Keyable, V: Storable>(
@@ -45,7 +70,6 @@ pub fn insert_key<K: Keyable, V: Storable>(
         .and(json_body())
         .and(with_db::<K, V>(db))
         .and_then(handlers::insert_key::<K, V>)
-    // .map(|key, value, db| handlers::insert_key(key, value, db))
 }
 
 pub fn delete_key<K: Keyable, V: Storable>(
