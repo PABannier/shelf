@@ -1,7 +1,10 @@
+use std::convert::Infallible;
+
 use serde::{Deserialize, Serialize};
 use warp::Filter;
 
 use crate::db::Db;
+use crate::hash::Record;
 use crate::{handlers, Keyable, Storable};
 
 #[derive(Serialize, Deserialize)]
@@ -11,11 +14,28 @@ struct Value {
 
 pub fn commands<K: Keyable, V: Storable>(
     db: Db<K, V>,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     get_key_list(db.clone())
         .or(get_key(db.clone()))
         .or(delete_key(db.clone()))
         .or(insert_key(db))
+        .recover(handlers::rejection)
+}
+
+pub fn upload_file<K: Keyable>(
+    db: Db<K, Record>,
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    // warp::path::param()
+    //     .and(warp::post())
+    //     .and(warp::multipart::form().max_length(5_000_000))
+    //     .and(with_db::<K, Record>(db))
+    //     .and_then(handlers::upload_file::<K>)
+    warp::path("upload")
+        .and(warp::path::param::<K>())
+        .and(warp::post())
+        .and(warp::multipart::form().max_length(5_000_000))
+        .and(with_db::<K, Record>(db))
+        .and_then(handlers::upload_file::<K>)
 }
 
 pub fn get_key_list<K: Keyable, V: Storable>(
