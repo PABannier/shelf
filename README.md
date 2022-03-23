@@ -1,4 +1,4 @@
-# A lightweight, functional distributed file system written in Rust
+# [Under construction] A lightweight, functional distributed file system written in Rust
 
 A lightweight, ready-to-use distributed file system written in Rust.
 
